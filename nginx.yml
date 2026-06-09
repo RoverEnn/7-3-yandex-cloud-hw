@@ -1,0 +1,39 @@
+---
+- name: Установка и тестирование nginx on web серверах
+  hosts: webservers
+  remote_user: user
+  become: true
+
+  tasks:
+    - name: Обновление apt и установка  nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Добавление в автозапуск и старт nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Создание тестовой страницы
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          Nginx works on {{ inventory_hostname }}
+
+    - name: Проверка HTTP ответа
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        status_code: 200
+        return_content: true
+      register: nginx_check
+
+    - name: Вывод тестовых результатов
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} -> HTTP {{ nginx_check.status }}: {{ nginx_check.content | trim }}"
